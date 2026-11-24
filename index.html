@@ -197,7 +197,7 @@ button.lnk{border:0;background:none;color:var(--ac);padding:6px 0;min-height:40p
     <h2 style="margin-top:18px;color:var(--bad)">Tehlikeli bölge</h2>
     <div class="m" style="margin:4px 0 8px">Bu cihazdaki tüm kayıtları siler. Geri alınamaz.</div>
     <button class="d" id="rst">Tüm verileri sıfırla</button>
-    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.15</div>
+    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.16</div>
   </div></div>
   <div class="tabs"><button data-t="main" class="on"><i>🏠</i><span>Ana sayfa</span></button><button data-t="cards"><i>💳</i><span>Kartlarım</span></button><button data-t="up"><i>📅</i><span>Yaklaşan</span></button><button data-t="hist"><i>🕘</i><span>Geçmiş</span></button><button data-t="set"><i>⚙️</i><span>Ayarlar</span></button></div>
 
@@ -862,7 +862,7 @@ $("x-inst").onclick=()=>{const L=live("inst"),cm=nowIdx();if(!L.length){alert("T
 $("x-fees").onclick=()=>{const L=live("fees").sort((a,b)=>String(a.date).localeCompare(String(b.date)));if(!L.length){alert("Hatırlatma kaydı yok.");return}
   dlCsv("egetek-hatirlatmalar-"+ymd(new Date())+".csv",[["Tür","Açıklama","Yön","Şahsi/Ticari","Tarih","Tutar (₺)","Tekrar","Durum"]].concat(L.map(f=>[feeKind(f),lab(f),f.dir==="in"?"Tahsilat":"Ödeme",tname(f.type),fd(f.date),+f.amount>0?nf(f.amount):"",repText(f)||"Tek seferlik",f.done?(f.dir==="in"?"Tahsil edildi":"Ödendi"):"Açık"])))};
 /* ---------- Google Drive eşleşmesi ---------- */
-const GC="egetek_gcid",GT="egetek_gtok",GO="egetek_gon",GL="egetek_glast",GFILE="egetek-sync.json",GSCOPE="https://www.googleapis.com/auth/drive.appdata";
+const GC="egetek_gcid",GT="egetek_gtok",GO="egetek_gon",GL="egetek_glast",GFILE="egetek-sync.json",GSCOPE="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email",GE="egetek_gemail";
 const gId=()=>(localStorage.getItem(GC)||"").trim();
 const gOn=()=>localStorage.getItem(GO)==="1"&&!!gId();
 const sig=o=>COLS.map(c=>Object.keys((o&&o[c])||{}).sort().map(k=>{const r=o[c][k]||{};return k+":"+(+r.u||0)+(r.del?"d":"")}).join(",")).join("|");
@@ -875,9 +875,13 @@ function loadGsi(){return new Promise((res,rej)=>{if(window.google&&google.accou
 function gValidTok(){try{const t=JSON.parse(localStorage.getItem(GT)||"null");if(t&&t.cid===gId()&&t.exp>Date.now()+60000)return t.t}catch(e){}return null}
 function gToken(consent){const v=gValidTok();if(v)return Promise.resolve(v);
   return loadGsi().then(()=>new Promise((res,rej)=>{
-    const cli=google.accounts.oauth2.initTokenClient({client_id:gId(),scope:GSCOPE,
-      callback:r=>{if(r&&r.access_token){try{localStorage.setItem(GT,JSON.stringify({t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000,cid:gId()}))}catch(e){}res(r.access_token)}else{const e=new Error(r&&r.error||"yetki verilmedi");e.code="auth";rej(e)}},
-      error_callback:e=>{const x=new Error(e&&e.type||"pencere açılamadı");x.code="auth";rej(x)}});
+    const hint=(localStorage.getItem(GE)||"").trim(),cfg={client_id:gId(),scope:GSCOPE,
+      callback:r=>{if(r&&r.access_token){try{localStorage.setItem(GT,JSON.stringify({t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000,cid:gId()}))}catch(e){}
+        if(!hint)fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{Authorization:"Bearer "+r.access_token}}).then(x=>x.ok?x.json():null).then(u=>{if(u&&u.email)try{localStorage.setItem(GE,u.email)}catch(e){}}).catch(()=>{});
+        res(r.access_token)}else{const e=new Error(r&&r.error||"yetki verilmedi");e.code="auth";rej(e)}},
+      error_callback:e=>{const x=new Error(e&&e.type||"pencere açılamadı");x.code="auth";rej(x)}};
+    if(hint)cfg.hint=hint;
+    const cli=google.accounts.oauth2.initTokenClient(cfg);
     cli.requestAccessToken({prompt:consent?"consent":""})}))}
 async function gfetch(url,opt){const tok=await gToken(false);const r=await fetch(url,Object.assign({},opt,{headers:Object.assign({Authorization:"Bearer "+tok},(opt&&opt.headers)||{})}));
   if(r.status===401||r.status===403){try{localStorage.removeItem(GT)}catch(e){}const e=new Error("Yetki süresi doldu");e.code="auth";throw e}
@@ -897,7 +901,7 @@ async function gsync(manual){if(!gOn()||gBusy||wiping)return;gBusy=true;clearTim
   }catch(e){setG(e.code==="auth"?"need":"err",e.code==="auth"?"":(e&&e.message)||"Eşleşme hatası");if(manual&&e.code!=="auth")toast("Eşleşme olmadı: "+((e&&e.message)||""))}
   gBusy=false}
 function schedSync(){if(!gOn())return;clearTimeout(gTimer);if(gValidTok())gTimer=setTimeout(()=>gsync(false),3500);else if(gState!=="need")setG("need","Değişiklikler henüz eşlenmedi · ☁ simgesine dokun")}
-$("cl").onclick=()=>{if(!gOn())return;gToken(false).then(()=>gsync(true)).catch(()=>gToken(true).then(()=>gsync(true)).catch(e=>setG("need",(e&&e.message)||"")))};
+$("cl").onclick=()=>{if(!gOn())return;gToken(false).then(()=>gsync(true)).catch(e=>setG("need",(e&&e.message)||""))};
 $("gcon").onclick=()=>{const id=$("gcid").value.trim();
   if(!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(id)){alert("Client ID biçimi hatalı. “…apps.googleusercontent.com” ile bitmeli ve başında “http” gibi bir ek olmamalı.");return}
   if(!(location.protocol==="https:"||location.hostname==="localhost")){alert("Google girişi için uygulamayı https adresinden (GitHub Pages) açmalısın.");return}
@@ -906,7 +910,7 @@ $("gcon").onclick=()=>{const id=$("gcid").value.trim();
 $("gnow").onclick=()=>{if(!gOn()){alert("Önce Google ile bağlan.");return}$("cl").onclick()};
 $("gdis").onclick=()=>{if(!confirm("Bağlantı kesilsin mi? Drive’daki eşleşme dosyası silinmez, bu cihazdaki veriler kalır."))return;
   const t=gValidTok();try{if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,()=>{})}catch(e){}
-  ["egetek_gon","egetek_gtok"].forEach(k=>localStorage.removeItem(k));setG("off")};
+  ["egetek_gon","egetek_gtok","egetek_gemail"].forEach(k=>localStorage.removeItem(k));setG("off")};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&gOn()&&gValidTok()&&Date.now()-(+localStorage.getItem(GL)||0)>60000)gsync(false)});
 setInterval(()=>{if(!document.hidden&&gOn()&&gValidTok()&&!gBusy)gsync(false)},5*60000);
 $("gcid").value=gId();setG(gOn()?(gValidTok()?"busy":"need"):"off");
