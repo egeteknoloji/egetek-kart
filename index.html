@@ -197,7 +197,7 @@ button.lnk{border:0;background:none;color:var(--ac);padding:6px 0;min-height:40p
     <h2 style="margin-top:18px;color:var(--bad)">Tehlikeli bölge</h2>
     <div class="m" style="margin:4px 0 8px">Bu cihazdaki tüm kayıtları siler. Geri alınamaz.</div>
     <button class="d" id="rst">Tüm verileri sıfırla</button>
-    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.16</div>
+    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.17</div>
   </div></div>
   <div class="tabs"><button data-t="main" class="on"><i>🏠</i><span>Ana sayfa</span></button><button data-t="cards"><i>💳</i><span>Kartlarım</span></button><button data-t="up"><i>📅</i><span>Yaklaşan</span></button><button data-t="hist"><i>🕘</i><span>Geçmiş</span></button><button data-t="set"><i>⚙️</i><span>Ayarlar</span></button></div>
 
@@ -256,6 +256,7 @@ button.lnk{border:0;background:none;color:var(--ac);padding:6px 0;min-height:40p
   <div class="sec" id="t-cards">
     <div class="chips"><button data-kv="list" class="on">Kartlar</button><button data-kv="inst">Taksitler</button><button data-kv="rep">Rapor</button></div>
     <div id="kvl">
+    <input id="qk" type="search" placeholder="Kart ara: isim, banka, kart, son 4 hane, not…" autocomplete="off" style="margin-top:2px">
     <div class="chips sm"><button data-fl="all" class="on">Tümü</button><button data-fl="sahsi">Şahsi</button><button data-fl="ticari">Ticari</button></div>
     <div class="chips sm" id="netsK"></div>
     <div class="tot"><div>Toplam kart limiti<div class="sub" id="kt2"></div></div><b id="kt1">0 ₺</b></div>
@@ -311,7 +312,7 @@ if(!S.mig){
   ["debts","fees"].forEach(col=>Object.keys(S[col]).forEach(k=>{const d=S[col][k];if(d&&!d.del&&d.label===undefined){d.label=(d.cardText||"").split("\n").join(" · ");d.type="sahsi";d.cardId="";d.paidAmt=d.paid?+d.amount:0;d.done=!!d.paid}}));
   S.mig=1;
 }
-let flt="all",net="all",edD=null,edK=null,kcol=PAL[0][0],hmSel="",hv="10",upN=30,mpCb=null,last=Date.now(),openF=null,fv={},q="",pers="",kv="list",repOpen={};
+let flt="all",net="all",edD=null,edK=null,kcol=PAL[0][0],hmSel="",hv="10",upN=30,mpCb=null,last=Date.now(),openF=null,fv={},q="",qk="",pers="",kv="list",repOpen={};
 let prev="",stack=[],curAct="",curAt=0,lastPush=0,toastT,netOpen=false,edF=null,gBusy=false,gTimer=null,gState="off";
 let grp={a:true,b:false,c:true};try{const g=JSON.parse(localStorage.getItem("egetek_grp"));if(g&&typeof g==="object")grp=Object.assign(grp,g)}catch(e){}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -475,7 +476,7 @@ function renderMain(){
   const cardRow=({c,s})=>{let h="";
     const head=`<div class="r"><div><div class="t">${cdot(c)}${esc(cname(c))}</div>${c.holder?`<div class="hn">${esc(c.holder)}</div>`:""}</div><div>${c.type==="ticari"?'<span class="b tc">Ticari</span>':""}${limBadge(c)}</div></div>`;
     const frm=openF&&openF.id===c.id?formHtml():"";
-    if(s.st==="wait")h+=`<div class="c wt"><div class="r"><div>${cdot(c)}<b>${esc(cname(c))}</b>${c.holder?` <span class="hn">· ${esc(c.holder)}</span>`:""}</div><div class="m">Hesap kesim: ${fdl(ymd(s.ci.next))} (${dl(s.ci.next)} gün)</div></div></div>`;
+    if(s.st==="wait")h+=`<div class="c wt"><div class="r"><div>${cdot(c)}<b>${esc(cname(c))}</b>${c.holder?` <span class="hn">· ${esc(c.holder)}</span>`:""}</div><div class="m">Hesap kesim: ${fdl(ymd(s.ci.next))} (${dl(s.ci.next)} gün)</div></div>${frm||`<div style="margin-top:8px"><button class="p" data-a="fnew" data-i="${c.id}">Borç gir</button></div>`}</div>`;
     else if(s.st==="nocut")h+=`<div class="c wt"><div class="r"><div>${cdot(c)}<b>${esc(cname(c))}</b>${c.holder?` <span class="hn">· ${esc(c.holder)}</span>`:""}</div><div class="m">Hesap kesim günü yok · Kartlarım’dan ekle</div></div></div>`;
     else if(s.st==="need"){const ag=Math.floor((Date.now()-s.ci.last)/864e5);h+=`<div class="c ${ag>=2?"od":""}">${head}<div class="m" style="margin-top:4px">Hesap kesildi: ${fdl(ymd(s.ci.last))}${ag>0?" ("+ag+" gün önce)":""} · <b>Borç: girilmedi</b></div>${frm||`<div style="margin-top:8px"><button class="p" data-a="fnew" data-i="${c.id}">Borç gir</button> <button data-a="fnone" data-i="${c.id}">Bu ay borç yok</button></div>`}</div>`}
     else if(s.st==="paid")h+=`<div class="c gd">${head}${s.real.map(d=>debtBlock(d,true)).join("")}<div style="margin-top:8px"><span class="b ok">✓ Tümü ödendi</span> <button class="p" data-a="fhide" data-i="${c.id}">Tamam, gizle</button></div><div class="m">Bir sonraki hesap kesim gününde (${fdl(ymd(s.ci.next))}) kart yeniden görünür.</div></div>`;
@@ -484,7 +485,7 @@ function renderMain(){
   const tk=norm(q).split(" ").filter(Boolean),searching=tk.length>0||!!pers;
   const dtx={};live("debts").forEach(d=>{if(d.cardId)dtx[d.cardId]=(dtx[d.cardId]||"")+" "+(d.note||"")+" "+(d.label||"")});
   const list=rows.filter(r=>okc(r.c)).filter(r=>!pers||hkey(r.c)===pers).filter(r=>!tk.length||matches(cardHay(r.c,dtx[r.c.id]),tk)).sort(cmp);
-  const GA=list.filter(r=>r.s.st==="debt"||r.s.st==="paid"),GB=list.filter(r=>r.s.st==="need"),GC=list.filter(r=>searching?(r.s.st==="wait"||r.s.st==="nocut"):(r.s.st==="wait"&&dl(r.s.ci.next)<=7));
+  const GA=list.filter(r=>r.s.st==="debt"||r.s.st==="paid"),GB=list.filter(r=>r.s.st==="need"),GC=list.filter(r=>searching?(r.s.st==="wait"||r.s.st==="nocut"):(r.s.st==="wait"&&(dl(r.s.ci.next)<=7||(openF&&openF.id===r.c.id))));
   const sumA=GA.reduce((t,r)=>t+r.s.real.filter(d=>!d.done).reduce((x,d)=>x+rem(d),0),0);
   const redA=GA.some(r=>r.s.st==="debt"&&r.s.real.some(d=>!d.done&&dl(d.due+"T00:00")<0)),redB=GB.some(r=>Math.floor((Date.now()-r.s.ci.last)/864e5)>=2);
   const grpHtml=(k,title,L,extra,red)=>{if(!L.length)return"";const o=searching||grp[k];return `<button class="gh ${red?"red":""}" data-a="grp" data-i="${k}">${o?"▾":"▸"} ${title} (${L.length})${extra}</button>`+(o?L.map(cardRow).join(""):"")};
@@ -529,7 +530,7 @@ function renderUp(){
   $("fl").innerHTML=(un.map(fr).join("")||'<div class="c" style="text-align:center;padding:18px 12px"><b>Hatırlatma yok</b><div class="m" style="margin:4px 0 10px">Kira, fatura, aidat gibi tarihleri ekle.</div><button class="p" data-a="addf">+ Hatırlatma ekle</button></div>')+(dn.length?`<details><summary>Tamamlananlar (${dn.length})</summary>${dn.map(fr).join("")}</details>`:"");
 }
 function renderCards(){
-  const L=live("krt").filter(c=>(flt==="all"||c.type===flt)&&(net==="all"||(c.net||"none")===net)).sort((a,b)=>cname(a).localeCompare(cname(b)));
+  const tkk=norm(qk).split(" ").filter(Boolean),L=live("krt").filter(c=>(flt==="all"||c.type===flt)&&(net==="all"||(c.net||"none")===net)).filter(c=>!tkk.length||matches(cardHay(c,""),tkk)).sort((a,b)=>cname(a).localeCompare(cname(b)));
   let lim=0,use=0,h="";
   L.forEach(c=>{const u=used(c.id);if(+c.limit>0){lim+=+c.limit;use+=u}
     const ci=cutInfo(c),pc=+c.limit>0?Math.min(100,u/c.limit*100):0;
@@ -538,9 +539,9 @@ function renderCards(){
     ${+c.limit>0?`<div class="m">Limit ${tl(c.limit)} · Kullanılan ${tl(u)} · Kullanılabilir ${tl(Math.max(0,c.limit-u))}</div><div class="bar"><i class="${pc>=80?"m2":pc>=50?"m1":""}" style="width:${pc}%"></i></div>`:""}
     <div class="m">${ci?"Hesap kesim: her ayın "+c.cutDay+". günü · sıradaki "+esc(fdl(ymd(ci.next))):"Hesap kesim günü yok (Düzenle’den ekle)"}</div>
     ${c.note?`<div class="m" style="margin-top:4px;white-space:pre-line">Not: ${esc(c.note)}</div>`:""}
-    <div class="act"><button data-a="ke" data-i="${c.id}">Düzenle</button>${mmenu(`<button class="d" data-a="kx" data-i="${c.id}">Sil</button>`)}</div></div>`});
+    <div class="act">${ci?`<button class="p" data-a="kdebt" data-i="${c.id}">Borç gir</button>`:""}<button data-a="ke" data-i="${c.id}">Düzenle</button>${mmenu(`<button class="d" data-a="kx" data-i="${c.id}">Sil</button>`)}</div></div>`});
   $("kt1").textContent=tl(lim);$("kt2").textContent=`${L.length} kart · Limitli kartlarda kullanılan ${tl(use)} · Kullanılabilir ${tl(Math.max(0,lim-use))}`;
-  $("kli").innerHTML=h||'<div class="m">Bu filtreyle kart yok.</div>';
+  $("kli").innerHTML=h||'<div class="m">Eşleşen kart yok.</div>';
   const fs=[...new Set(live("krt").map(c=>c.feature).filter(Boolean))];$("kfl").innerHTML=fs.map(x=>`<option value="${esc(x)}">`).join("");
 }
 function renderHist(){
@@ -696,6 +697,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.que
 document.querySelectorAll("[data-fl]").forEach(b=>b.onclick=()=>{flt=b.dataset.fl;document.querySelectorAll("[data-fl]").forEach(x=>x.classList.toggle("on",x===b));render()});
 document.querySelectorAll("[data-kv]").forEach(b=>b.onclick=()=>{kv=b.dataset.kv;document.querySelectorAll("[data-kv]").forEach(x=>x.classList.toggle("on",x===b));$("kvl").style.display=kv==="list"?"block":"none";$("kvr").style.display=kv==="rep"?"block":"none";$("kvi").style.display=kv==="inst"?"block":"none";renderRep();renderInst()});
 $("q").addEventListener("input",()=>{q=$("q").value;renderMain()});
+$("qk").addEventListener("input",()=>{qk=$("qk").value;renderCards()});
 document.querySelectorAll("[data-un]").forEach(b=>b.onclick=()=>{upN=+b.dataset.un;document.querySelectorAll("[data-un]").forEach(x=>x.classList.toggle("on",x===b));renderUp()});
 document.querySelectorAll("[data-hv]").forEach(b=>b.onclick=()=>{hv=b.dataset.hv;document.querySelectorAll("[data-hv]").forEach(x=>x.classList.toggle("on",x===b));renderHist()});
 ["dd","fdate","ftime","ktm"].forEach(id=>{const e=$(id);e.addEventListener("click",()=>{try{e.showPicker()}catch(x){}})});
@@ -734,13 +736,14 @@ document.addEventListener("click",e=>{const t=e.target;
   else if(a==="cnav"){calM+=+i;calSel="";renderUp()}
   else if(a==="cday"){calSel=i;renderUp()}
   else if(a==="fnew")startForm(i,"new");
+  else if(a==="kdebt"){goTab("main");grp.a=true;grp.b=true;q="";$("q").value="";pers="";startForm(i,"new")}
   else if(a==="fek")startForm(i,"ek");
   else if(a==="fcancel"){openF=null;renderMain()}
   else if(a==="fsave"){const c=cardOf(openF.id),ci=c&&cutInfo(c),am=parseFloat(fv.amount);
     if(!(am>0)){alert("Borç tutarını girin.");return}if(!fv.due){alert("Son ödeme gününü seçin.");return}
     const o={cardId:c.id,label:cname(c),type:c.type,amount:am,minPay:parseFloat(fv.min)||0,due:fv.due};
     if(openF.mode==="edit"){const old=S.debts[openF.debtId];o.done=am-(+old.paidAmt||0)<=0.005;if(!o.done)o.hidden=false;if(old.ek)o.note=fv.note;put("debts",openF.debtId,o)}
-    else{o.paidAmt=0;o.done=false;o.period=ci.key;o.ek=openF.mode==="ek";if(o.ek)o.note=fv.note.trim();put("debts",uid(),o)}
+    else{if(openF.mode==="new")live("debts").filter(x=>x.cardId===c.id&&x.period===ci.key&&x.none).forEach(x=>del("debts",x.id));o.paidAmt=0;o.done=false;o.period=ci.key;o.ek=openF.mode==="ek";if(o.ek)o.note=fv.note.trim();put("debts",uid(),o)}
     openF=null;renderMain()}
   else if(a==="fnone"){const c=cardOf(i),ci=cutInfo(c);put("debts",uid(),{cardId:c.id,label:cname(c),type:c.type,amount:0,paidAmt:0,none:true,done:true,hidden:true,period:ci.key,due:ymd(ci.last)})}
   else if(a==="fhide"){const s=cardState(cardOf(i));s.real.forEach(d=>{S.debts[d.id].hidden=true;S.debts[d.id].u=Date.now()});save()}
