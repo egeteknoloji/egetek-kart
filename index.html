@@ -197,7 +197,7 @@ button.lnk{border:0;background:none;color:var(--ac);padding:6px 0;min-height:40p
     <h2 style="margin-top:18px;color:var(--bad)">Tehlikeli bölge</h2>
     <div class="m" style="margin:4px 0 8px">Bu cihazdaki tüm kayıtları siler. Geri alınamaz.</div>
     <button class="d" id="rst">Tüm verileri sıfırla</button>
-    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.14</div>
+    <div class="m" style="margin-top:16px">EGETEK Kart · Sürüm 1.15</div>
   </div></div>
   <div class="tabs"><button data-t="main" class="on"><i>🏠</i><span>Ana sayfa</span></button><button data-t="cards"><i>💳</i><span>Kartlarım</span></button><button data-t="up"><i>📅</i><span>Yaklaşan</span></button><button data-t="hist"><i>🕘</i><span>Geçmiş</span></button><button data-t="set"><i>⚙️</i><span>Ayarlar</span></button></div>
 
@@ -324,7 +324,7 @@ const live=col=>Object.keys(S[col]).filter(k=>!S[col][k].del).map(k=>Object.assi
 const debts=()=>live("debts").filter(d=>!d.none);
 const esc=s=>{const d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML};
 let hideA=false;try{hideA=localStorage.getItem("egetek_hide")==="1"}catch(e){}
-const tlReal=n=>Number(n||0).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₺";
+const tlReal=n=>{n=Math.round(Number(n||0)*100)/100;const w=Number.isInteger(n)?0:2;return n.toLocaleString("tr-TR",{minimumFractionDigits:w,maximumFractionDigits:w})+" ₺"};
 const tl=n=>hideA?"•••• ₺":tlReal(n);
 const maskTxt=t=>hideA?String(t).replace(/\d[\d.]*,\d\d ₺/g,"•••• ₺"):t;
 const p2=x=>String(x).padStart(2,"0");
